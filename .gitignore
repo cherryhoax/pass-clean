@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Coverage
+coverage/
+*.lcov
+
+# Build outputs
+/dist/
+/build/
+
+# OS
+.DS_Store
+
+# Env files
+.env
+.env.*
+
+# Editor
+.vscode/
+.idea/
+
+# Local data
+passwords.csv
+passwords (cleaned).csv
+passwords_cleaned.csv
