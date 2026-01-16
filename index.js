@@ -34,6 +34,7 @@ const lowerUsernamesEnabled = flags.has('--case-insensitive-usernames') || flags
 const ignoreEmptyPasswordsEnabled = flags.has('--ignore-empty-passwords') || flags.has('-p') || isEnvTrue('IGNORE_EMPTY_PASSWORDS');
 const preferModifyTimeEnabled = flags.has('--prefer-modify-time') || flags.has('-m') || isEnvTrue('PREFER_MODIFY_TIME');
 const overwriteEnabled = flags.has('--overwrite') || flags.has('-o') || isEnvTrue('OVERWRITE_OUTPUT');
+const logDuplicatesEnabled = flags.has('--log-duplicates') || flags.has('-d') || isEnvTrue('LOG_DUPLICATES');
 
 // Derive default output name: "<name> (cleaned)<ext>"
 const makeCleanedName = (inputPath) => {
@@ -46,13 +47,20 @@ const makeCleanedName = (inputPath) => {
 const run = (resolvedInputFile) => {
     const OUTPUT_FILE = overwriteEnabled ? resolvedInputFile : makeCleanedName(resolvedInputFile);
 
-    console.log('Processing CSV...');
-    console.log(`Input file: ${resolvedInputFile}`);
-    if (normalizeUrlEnabled) console.log('URL normalization enabled (scheme+host only).');
-    if (lowerUsernamesEnabled) console.log('Usernames will be lowercased for dedupe.');
-    if (ignoreEmptyPasswordsEnabled) console.log('Rows without passwords will be skipped.');
-    if (preferModifyTimeEnabled) console.log('Rows missing modifyTime will be skipped.');
-    console.log(`Output file: ${OUTPUT_FILE}${overwriteEnabled ? ' (overwrite enabled)' : ''}`);
+    // Styled labels (bold + color)
+    const ANSI = { reset: '\x1b[0m', bold: '\x1b[1m', cyan: '\x1b[36m', magenta: '\x1b[35m' };
+    const label = (text) => `${ANSI.bold}${ANSI.cyan}${text}:${ANSI.reset}`;
+    const dupLabel = (text) => `${ANSI.bold}${ANSI.magenta}${text}:${ANSI.reset}`;
+
+    console.log(`${label('Input file')} ${resolvedInputFile}`);
+    if (normalizeUrlEnabled) console.log(`${label('Normalize URL')} scheme+host only`);
+    if (lowerUsernamesEnabled) console.log(`${label('Usernames')} lowercased for dedupe`);
+    if (ignoreEmptyPasswordsEnabled) console.log(`${label('Passwords')} rows without values skipped`);
+    if (preferModifyTimeEnabled) console.log(`${label('modifyTime')} required; rows without skipped`);
+    if (logDuplicatesEnabled) console.log(`${dupLabel('Duplicates')} will be logged`);
+    console.log(`${label('Output file')} ${OUTPUT_FILE}${overwriteEnabled ? ' (overwrite enabled)' : ''}`);
+
+    let duplicatesCount = 0;
 
     fs.createReadStream(resolvedInputFile)
         .pipe(csv())
@@ -75,6 +83,10 @@ const run = (resolvedInputFile) => {
 
             // Compare timestamps when the account already exists in the map
             if (latestRecords.has(uniqueKey)) {
+                duplicatesCount += 1;
+                if (logDuplicatesEnabled) {
+                    console.log(`${dupLabel('Duplicate')} ${usernamePart} | ${sitePart}`);
+                }
                 const existingRow = latestRecords.get(uniqueKey);
                 
                 // Use modifyTime when available, otherwise fall back to createTime
@@ -101,9 +113,10 @@ const run = (resolvedInputFile) => {
                 .write(resultData, { headers: true })
                 .pipe(ws)
                 .on('finish', () => {
-                    console.log('Done.');
-                    console.log(`Unique accounts: ${resultData.length}`);
-                    console.log(`Saved file: ${OUTPUT_FILE}`);
+                    console.log(`${label('Status')} Done`);
+                    console.log(`${label('Unique accounts')} ${resultData.length}`);
+                    console.log(`${dupLabel('Duplicates')} ${duplicatesCount}`);
+                    console.log(`${label('Saved file')} ${OUTPUT_FILE}`);
                 });
         });
 };
@@ -129,6 +142,24 @@ const normalizeUrl = (value) => {
     }
 };
 
+// Normalize a CLI-provided input path
+const normalizeInputPath = (p) => {
+    if (!p) return p;
+    let s = p.trim();
+    // strip surrounding quotes
+    if ((s.startsWith('"') && s.endsWith('"')) || (s.startsWith("'") && s.endsWith("'"))) {
+        s = s.slice(1, -1);
+    }
+    // unescape spaces (common from drag-and-drop)
+    s = s.replace(/\\\s/g, ' ');
+    // expand ~ to home directory
+    if (s.startsWith('~')) {
+        const os = require('os');
+        s = os.homedir() + s.slice(1);
+    }
+    return s;
+};
+
 const printHelp = () => {
     console.log(`Usage: pass-clean [options] input.csv\n` +
         `Input CSV is required. Flags may appear before or after the input path.\n` +
@@ -146,28 +177,31 @@ const printHelp = () => {
 
 // Entry point: show help if requested; prompt for input when missing
 const start = () => {
-    if (helpEnabled && inputFile) {
+    if (helpEnabled) {
         printHelp();
         process.exit(0);
     }
 
     if (!inputFile) {
         printHelp();
-        const readline = require('readline');
-        const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
-        rl.question('Enter input CSV path: ', (answer) => {
-            rl.close();
-            const provided = (answer || '').trim();
-            if (!provided) {
-                console.error('No input file provided. Exiting.');
-                process.exit(1);
-            }
-            run(provided);
-        });
-        return;
+        console.error('No input file provided. Exiting.');
+        process.exit(1);
     }
 
-    run(inputFile);
+    const normalized = normalizeInputPath(inputFile);
+    const fsPath = normalized;
+    try {
+        if (!fs.existsSync(fsPath)) {
+            console.error(`Input not found: ${fsPath}`);
+            process.exit(1);
+        }
+    } catch (e) {
+        console.error(`Unable to access input: ${fsPath}`);
+        console.error(e.message);
+        process.exit(1);
+    }
+
+    run(fsPath);
 };
 
 start();

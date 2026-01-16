@@ -26,6 +26,7 @@ Input: required. Provide the CSV path as the first positional argument (flags ma
 - `--prefer-modify-time`, `-m` — require `modifyTime`; rows without it are skipped.
 - `--overwrite`, `-o` — write output to the input filename (overwrites the original file).
 - `--help`, `-h` — show help and exit.
+- `--log-duplicates`, `-d` — print each duplicate encountered and a final duplicate count.
 
 ## Environment variables
 
@@ -34,6 +35,7 @@ Input: required. Provide the CSV path as the first positional argument (flags ma
 - `IGNORE_EMPTY_PASSWORDS=1` — same as `--ignore-empty-passwords` / `-p`.
 - `PREFER_MODIFY_TIME=1` — same as `--prefer-modify-time` / `-m`.
 - `OVERWRITE_OUTPUT=1` — same as `--overwrite` / `-o`.
+- `LOG_DUPLICATES=1` — same as `--log-duplicates` / `-d`.
 
 ## Examples
 
