@@ -4,7 +4,8 @@
   "description": "",
   "main": "index.js",
   "bin": {
-    "pass-clean": "./index.js"
+    "pass-clean": "./index.js",
+    "clean-pass": "./index.js"
   },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"

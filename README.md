@@ -7,16 +7,16 @@ Clean and deduplicate password CSV exports.
 Global install from GitHub (replace owner if you fork):
 
 ```bash
-npm install -g cherryhoax/pass-clean
+npm install -g github:cherryhoax/pass-clean
 ```
 
 ## Usage
 
-- Run locally: `node index.js [flags]`
-- After npm install (local bin): `npx pass-clean [flags]`
-- After global install: `pass-clean [flags]`
+- Run locally: `node index.js [flags] [input.csv]`
+- After npm install (local bin): `npx pass-clean [flags] [input.csv]`
+- After global install: `pass-clean [flags] [input.csv]` (alias: `clean-pass`)
 
-Input: `passwords.csv` in the working directory. Output defaults to `passwords (cleaned).csv` (original is left untouched unless overwrite is enabled).
+Input: required. Provide the CSV path as the first positional argument (flags may appear before or after the input). Drag-and-drop a CSV onto the terminal also works. Output defaults to `<input name> (cleaned)<ext>` (original is left untouched unless overwrite is enabled).
 
 ## Flags
 
@@ -25,6 +25,7 @@ Input: `passwords.csv` in the working directory. Output defaults to `passwords (
 - `--ignore-empty-passwords`, `-p` — skip rows that have no password value.
 - `--prefer-modify-time`, `-m` — require `modifyTime`; rows without it are skipped.
 - `--overwrite`, `-o` — write output to the input filename (overwrites the original file).
+- `--help`, `-h` — show help and exit.
 
 ## Environment variables
 
